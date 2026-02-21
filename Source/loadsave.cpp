@@ -329,7 +329,11 @@ void LoadItemData(LoadHelper &file, Item &item)
 	if (!gbIsHellfireSaveGame) {
 		item.IDidx = RemapItemIdxFromDiablo(item.IDidx);
 	}
-	item.dwBuff = file.NextLE<uint32_t>();
+	{
+		uint32_t rawDwBuff = file.NextLE<uint32_t>();
+		item.dwBuff = rawDwBuff & 0xFF;
+		item._iQuantity = static_cast<uint8_t>((rawDwBuff >> 8) & 0xFF);
+	}
 	if (gbIsHellfireSaveGame)
 		item._iDamAcFlags = static_cast<ItemSpecialEffectHf>(file.NextLE<uint32_t>());
 	else
@@ -1127,7 +1131,7 @@ void SaveItem(SaveHelper &file, const Item &item)
 	file.Skip(1); // Alignment
 	file.WriteLE<uint32_t>(item._iStatFlag ? 1 : 0);
 	file.WriteLE<int32_t>(idx);
-	file.WriteLE<uint32_t>(item.dwBuff);
+	file.WriteLE<uint32_t>((item.dwBuff & 0xFF) | (static_cast<uint32_t>(item._iQuantity) << 8));
 	if (gbIsHellfire)
 		file.WriteLE<uint32_t>(static_cast<uint32_t>(item._iDamAcFlags));
 }

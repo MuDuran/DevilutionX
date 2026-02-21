@@ -303,5 +303,234 @@ TEST_F(InvTest, ItemSize)
 	EXPECT_EQ(GetInventorySize(testItem), Size(1, 1));
 }
 
+void set_up_potion(Item &item, item_misc_id potionType)
+{
+	item = {};
+	item._itype = ItemType::Misc;
+	item._iMiscId = potionType;
+	item._iCurs = ICURS_POTION_OF_HEALING;
+	item._iQuantity = 1;
+}
+
+TEST_F(InvTest, IsStackablePotion)
+{
+	Item item {};
+
+	set_up_potion(item, IMISC_HEAL);
+	EXPECT_TRUE(item.isStackablePotion());
+
+	set_up_potion(item, IMISC_FULLHEAL);
+	EXPECT_TRUE(item.isStackablePotion());
+
+	set_up_potion(item, IMISC_MANA);
+	EXPECT_TRUE(item.isStackablePotion());
+
+	set_up_potion(item, IMISC_FULLMANA);
+	EXPECT_TRUE(item.isStackablePotion());
+
+	set_up_potion(item, IMISC_REJUV);
+	EXPECT_TRUE(item.isStackablePotion());
+
+	set_up_potion(item, IMISC_FULLREJUV);
+	EXPECT_TRUE(item.isStackablePotion());
+
+	item = {};
+	item._itype = ItemType::Misc;
+	item._iMiscId = IMISC_SCROLL;
+	EXPECT_FALSE(item.isStackablePotion());
+
+	item = {};
+	item._itype = ItemType::Gold;
+	item._iMiscId = IMISC_NONE;
+	EXPECT_FALSE(item.isStackablePotion());
+}
+
+TEST_F(InvTest, PotionQuantityInitialization)
+{
+	Item item {};
+
+	set_up_potion(item, IMISC_HEAL);
+	EXPECT_EQ(item._iQuantity, 1);
+
+	item = {};
+	item._itype = ItemType::Sword;
+	item._iMiscId = IMISC_NONE;
+	item._iQuantity = 0;
+	EXPECT_EQ(item._iQuantity, 0);
+}
+
+TEST_F(InvTest, TryStackPotion_into_existing_stack)
+{
+	SNetInitializeProvider(SELCONN_LOOPBACK, nullptr);
+	clear_inventory();
+
+	set_up_potion(MyPlayer->InvList[0], IMISC_HEAL);
+	MyPlayer->InvList[0]._iQuantity = 1;
+	MyPlayer->InvGrid[30] = 1;
+	MyPlayer->_pNumInv = 1;
+
+	Item newPotion {};
+	set_up_potion(newPotion, IMISC_HEAL);
+
+	EXPECT_TRUE(TryStackPotionInInventory(*MyPlayer, newPotion, true));
+	EXPECT_EQ(MyPlayer->InvList[0]._iQuantity, 2);
+	EXPECT_EQ(MyPlayer->_pNumInv, 1);
+}
+
+TEST_F(InvTest, TryStackPotion_fills_to_max)
+{
+	SNetInitializeProvider(SELCONN_LOOPBACK, nullptr);
+	clear_inventory();
+
+	set_up_potion(MyPlayer->InvList[0], IMISC_HEAL);
+	MyPlayer->InvList[0]._iQuantity = 2;
+	MyPlayer->InvGrid[30] = 1;
+	MyPlayer->_pNumInv = 1;
+
+	Item newPotion {};
+	set_up_potion(newPotion, IMISC_HEAL);
+
+	EXPECT_TRUE(TryStackPotionInInventory(*MyPlayer, newPotion, true));
+	EXPECT_EQ(MyPlayer->InvList[0]._iQuantity, 3);
+}
+
+TEST_F(InvTest, TryStackPotion_full_stack_refuses)
+{
+	SNetInitializeProvider(SELCONN_LOOPBACK, nullptr);
+	clear_inventory();
+
+	set_up_potion(MyPlayer->InvList[0], IMISC_HEAL);
+	MyPlayer->InvList[0]._iQuantity = MaxPotionStack;
+	MyPlayer->InvGrid[30] = 1;
+	MyPlayer->_pNumInv = 1;
+
+	Item newPotion {};
+	set_up_potion(newPotion, IMISC_HEAL);
+
+	EXPECT_FALSE(TryStackPotionInInventory(*MyPlayer, newPotion, true));
+	EXPECT_EQ(MyPlayer->InvList[0]._iQuantity, MaxPotionStack);
+}
+
+TEST_F(InvTest, TryStackPotion_different_types_dont_stack)
+{
+	SNetInitializeProvider(SELCONN_LOOPBACK, nullptr);
+	clear_inventory();
+
+	set_up_potion(MyPlayer->InvList[0], IMISC_HEAL);
+	MyPlayer->InvList[0]._iQuantity = 1;
+	MyPlayer->InvGrid[30] = 1;
+	MyPlayer->_pNumInv = 1;
+
+	Item manaPotion {};
+	set_up_potion(manaPotion, IMISC_MANA);
+
+	EXPECT_FALSE(TryStackPotionInInventory(*MyPlayer, manaPotion, true));
+	EXPECT_EQ(MyPlayer->InvList[0]._iQuantity, 1);
+}
+
+TEST_F(InvTest, TryStackPotion_non_potion_doesnt_stack)
+{
+	SNetInitializeProvider(SELCONN_LOOPBACK, nullptr);
+	clear_inventory();
+
+	Item scroll {};
+	scroll._itype = ItemType::Misc;
+	scroll._iMiscId = IMISC_SCROLL;
+	scroll._iQuantity = 0;
+
+	EXPECT_FALSE(TryStackPotionInInventory(*MyPlayer, scroll, true));
+}
+
+TEST_F(InvTest, TryStackPotion_empty_inventory)
+{
+	SNetInitializeProvider(SELCONN_LOOPBACK, nullptr);
+	clear_inventory();
+
+	Item potion {};
+	set_up_potion(potion, IMISC_HEAL);
+
+	EXPECT_FALSE(TryStackPotionInInventory(*MyPlayer, potion, true));
+}
+
+TEST_F(InvTest, TryStackPotion_persistItem_false_does_not_modify)
+{
+	SNetInitializeProvider(SELCONN_LOOPBACK, nullptr);
+	clear_inventory();
+
+	set_up_potion(MyPlayer->InvList[0], IMISC_HEAL);
+	MyPlayer->InvList[0]._iQuantity = 1;
+	MyPlayer->InvGrid[30] = 1;
+	MyPlayer->_pNumInv = 1;
+
+	Item newPotion {};
+	set_up_potion(newPotion, IMISC_HEAL);
+
+	EXPECT_TRUE(TryStackPotionInInventory(*MyPlayer, newPotion, false));
+	EXPECT_EQ(MyPlayer->InvList[0]._iQuantity, 1);
+}
+
+TEST_F(InvTest, TryStackPotion_multi_quantity_pickup)
+{
+	SNetInitializeProvider(SELCONN_LOOPBACK, nullptr);
+	clear_inventory();
+
+	set_up_potion(MyPlayer->InvList[0], IMISC_HEAL);
+	MyPlayer->InvList[0]._iQuantity = 1;
+	MyPlayer->InvGrid[30] = 1;
+	MyPlayer->_pNumInv = 1;
+
+	Item stackOfTwo {};
+	set_up_potion(stackOfTwo, IMISC_HEAL);
+	stackOfTwo._iQuantity = 2;
+
+	EXPECT_TRUE(TryStackPotionInInventory(*MyPlayer, stackOfTwo, true));
+	EXPECT_EQ(MyPlayer->InvList[0]._iQuantity, 3);
+}
+
+TEST_F(InvTest, TryStackPotion_multi_quantity_no_room)
+{
+	SNetInitializeProvider(SELCONN_LOOPBACK, nullptr);
+	clear_inventory();
+
+	set_up_potion(MyPlayer->InvList[0], IMISC_HEAL);
+	MyPlayer->InvList[0]._iQuantity = 2;
+	MyPlayer->InvGrid[30] = 1;
+	MyPlayer->_pNumInv = 1;
+
+	Item stackOfTwo {};
+	set_up_potion(stackOfTwo, IMISC_HEAL);
+	stackOfTwo._iQuantity = 2;
+
+	EXPECT_FALSE(TryStackPotionInInventory(*MyPlayer, stackOfTwo, true));
+	EXPECT_EQ(MyPlayer->InvList[0]._iQuantity, 2);
+}
+
+TEST_F(InvTest, DwBuff_quantity_encoding)
+{
+	Item item {};
+	set_up_potion(item, IMISC_HEAL);
+	item._iQuantity = 3;
+	item.dwBuff = CF_HELLFIRE;
+
+	uint32_t encoded = (item.dwBuff & 0xFF) | (static_cast<uint32_t>(item._iQuantity) << 8);
+	EXPECT_EQ(encoded & 0xFF, CF_HELLFIRE);
+	EXPECT_EQ((encoded >> 8) & 0xFF, 3);
+
+	uint32_t decodedDwBuff = encoded & 0xFF;
+	uint8_t decodedQuantity = static_cast<uint8_t>((encoded >> 8) & 0xFF);
+	EXPECT_EQ(decodedDwBuff, CF_HELLFIRE);
+	EXPECT_EQ(decodedQuantity, 3);
+}
+
+TEST_F(InvTest, DwBuff_quantity_backward_compat)
+{
+	uint32_t oldSaveDwBuff = CF_HELLFIRE;
+	uint32_t decodedDwBuff = oldSaveDwBuff & 0xFF;
+	uint8_t decodedQuantity = static_cast<uint8_t>((oldSaveDwBuff >> 8) & 0xFF);
+
+	EXPECT_EQ(decodedDwBuff, CF_HELLFIRE);
+	EXPECT_EQ(decodedQuantity, 0);
+}
+
 } // namespace
 } // namespace devilution

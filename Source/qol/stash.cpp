@@ -512,7 +512,12 @@ bool UseStashItem(uint16_t c)
 		CloseInventory();
 		return true;
 	}
-	Stash.RemoveStashItem(c);
+	if (Stash.stashList[c].isStackablePotion() && Stash.stashList[c]._iQuantity > 1) {
+		Stash.stashList[c]._iQuantity--;
+		Stash.dirty = true;
+	} else {
+		Stash.RemoveStashItem(c);
+	}
 
 	return true;
 }
