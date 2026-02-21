@@ -18,6 +18,7 @@
 #include "controls/touch/gamepad.h"
 #include "cursor.h"
 #include "doom.h"
+#include "engine/backbuffer_state.hpp"
 #include "engine/point.hpp"
 #include "engine/points_in_rectangle_range.hpp"
 #include "gmenu.h"
@@ -2209,6 +2210,12 @@ void QuickCast(size_t slot)
 	}
 
 	CheckPlrSpell(false, spell, spellType);
+	// Keep the spell bar selection in sync with the spell we just cast
+	if (IsValidSpell(spell)) {
+		myPlayer._pRSpell = spell;
+		myPlayer._pRSplType = spellType;
+		RedrawEverything();
+	}
 	LastMouseButtonAction = prevMouseButtonAction;
 }
 

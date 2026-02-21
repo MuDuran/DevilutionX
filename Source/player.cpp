@@ -2484,18 +2484,18 @@ void AddPlrExperience(Player &player, int lvl, int exp)
 
 void AddPlrMonstExper(int lvl, int exp, char pmask)
 {
-	int totplrs = 0;
+/*	int totplrs = 0;
 	for (size_t i = 0; i < Players.size(); i++) {
-		if (((1 << i) & pmask) != 0) {
+		//if (((1 << i) & pmask) != 0) {
 			totplrs++;
 		}
 	}
-
-	if (totplrs != 0) {
-		int e = exp / totplrs;
-		if ((pmask & (1 << MyPlayerId)) != 0)
+*/
+//	if (totplrs != 0) {
+		int e = exp / Players.size();
+//		if ((pmask & (1 << MyPlayerId)) != 0)
 			AddPlrExperience(*MyPlayer, lvl, e);
-	}
+//	}
 }
 
 void InitPlayer(Player &player, bool firstTime)
