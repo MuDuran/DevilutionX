@@ -720,7 +720,13 @@ void CheckInvCut(Player &player, Point cursorPosition, bool automaticMove, bool 
 			holdItem = player.InvList[iv - 1];
 			if (automaticMove) {
 				if (CanBePlacedOnBelt(holdItem)) {
-					automaticallyMoved = AutoPlaceItemInBelt(player, holdItem, true);
+					if (holdItem.isStackablePotion() && holdItem._iQuantity > 1) {
+						Item singlePotion = holdItem;
+						singlePotion._iQuantity = 1;
+						automaticallyMoved = AutoPlaceItemInBelt(player, singlePotion, true);
+					} else {
+						automaticallyMoved = AutoPlaceItemInBelt(player, holdItem, true);
+					}
 				} else if (CanEquip(holdItem)) {
 					/*
 					 * Move the respective InvBodyItem to inventory before moving the item from inventory
@@ -1237,9 +1243,6 @@ bool AutoPlaceItemInBelt(Player &player, const Item &item, bool persistItem)
 		if (beltItem.isEmpty()) {
 			if (persistItem) {
 				beltItem = item;
-				if (beltItem.isStackablePotion()) {
-					beltItem._iQuantity = 1;
-				}
 				player.CalcScrolls();
 				RedrawComponent(PanelDrawComponent::Belt);
 				if (&player == MyPlayer) {
@@ -1701,7 +1704,26 @@ void AutoGetItem(Player &player, Item *itemPointer, int ii)
 			autoEquipped = true;
 		}
 
-		if (!done) {
+		if (!done && item.isStackablePotion() && item._iQuantity > 1) {
+			uint8_t remaining = item._iQuantity;
+
+			Item singlePotion = item;
+			singlePotion._iQuantity = 1;
+
+			while (remaining > 0 && AutoPlaceItemInBelt(player, singlePotion, true)) {
+				remaining--;
+			}
+
+			if (remaining > 0) {
+				Item leftover = item;
+				leftover._iQuantity = remaining;
+				if (AutoPlaceItemInInventory(player, leftover, true)) {
+					remaining = 0;
+				}
+			}
+
+			done = (remaining == 0);
+		} else if (!done) {
 			done = AutoPlaceItemInBelt(player, item, true);
 		}
 		if (!done) {

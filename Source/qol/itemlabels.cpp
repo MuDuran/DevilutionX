@@ -20,6 +20,7 @@
 #include "utils/format_int.hpp"
 #include "utils/language.h"
 #include "utils/stdcompat/string_view.hpp"
+#include "utils/str_cat.hpp"
 
 namespace devilution {
 
@@ -109,6 +110,8 @@ void AddItemToLabelQueue(int id, Point position)
 	StringOrView textOnGround;
 	if (item._itype == ItemType::Gold) {
 		textOnGround = fmt::format(fmt::runtime(_("{:s} gold")), FormatInteger(item._ivalue));
+	} else if (item._iQuantity > 1) {
+		textOnGround = StrCat(item.getName().str(), " (x", item._iQuantity, ")");
 	} else {
 		textOnGround = item.getName();
 	}

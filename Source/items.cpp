@@ -3650,7 +3650,11 @@ void GetItemFrm(Item &item)
 void GetItemStr(Item &item)
 {
 	if (item._itype != ItemType::Gold) {
-		InfoString = item.getName();
+		if (item._iQuantity > 1) {
+			InfoString = StrCat(item.getName().str(), " (x", item._iQuantity, ")");
+		} else {
+			InfoString = item.getName();
+		}
 		InfoColor = item.getTextColor();
 	} else {
 		int nGold = item._ivalue;

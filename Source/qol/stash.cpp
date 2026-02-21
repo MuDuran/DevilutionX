@@ -218,14 +218,25 @@ void CheckStashCut(Point cursorPosition, bool automaticMove)
 		holdItem = Stash.stashList[iv];
 		if (automaticMove) {
 			if (CanBePlacedOnBelt(holdItem)) {
-				automaticallyMoved = AutoPlaceItemInBelt(player, holdItem, true);
+				if (holdItem.isStackablePotion() && holdItem._iQuantity > 1) {
+					Item singlePotion = holdItem;
+					singlePotion._iQuantity = 1;
+					automaticallyMoved = AutoPlaceItemInBelt(player, singlePotion, true);
+				} else {
+					automaticallyMoved = AutoPlaceItemInBelt(player, holdItem, true);
+				}
 			} else {
 				automaticallyMoved = automaticallyEquipped = AutoEquip(player, holdItem);
 			}
 		}
 
 		if (!automaticMove || automaticallyMoved) {
-			Stash.RemoveStashItem(iv);
+			if (automaticallyMoved && Stash.stashList[iv].isStackablePotion() && Stash.stashList[iv]._iQuantity > 1) {
+				Stash.stashList[iv]._iQuantity--;
+				Stash.dirty = true;
+			} else {
+				Stash.RemoveStashItem(iv);
+			}
 		}
 	}
 
@@ -395,6 +406,12 @@ void DrawStash(const Surface &out)
 		}
 
 		DrawItem(item, out, position, sprite);
+
+		if (item._iQuantity > 1) {
+			DrawString(out, StrCat("x", item._iQuantity),
+			    { position - Displacement { 0, 12 }, InventorySlotSizeInPixels },
+			    { UiFlags::ColorWhite | UiFlags::AlignRight });
+		}
 	}
 
 	Point position = GetPanelPosition(UiPanels::Stash);
@@ -446,7 +463,11 @@ uint16_t CheckStashHLight(Point mousePosition)
 	}
 
 	InfoColor = item.getTextColor();
-	InfoString = item.getName();
+	if (item._iQuantity > 1) {
+		InfoString = StrCat(item.getName().str(), " (x", item._iQuantity, ")");
+	} else {
+		InfoString = item.getName();
+	}
 	if (item._iIdentified) {
 		PrintItemDetails(item);
 	} else {
