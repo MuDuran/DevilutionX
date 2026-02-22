@@ -159,6 +159,13 @@ void DrawSmallSpellIconBorder(const Surface &out, Point position)
 	UnsafeDrawBorder2px(out, Rectangle { Point { position.x, position.y - height + 1 }, Size { width, height } }, SplTransTbl[PAL8_YELLOW + 2]);
 }
 
+void DrawSmallSpellIconBorder(const Surface &out, Point position, uint8_t color)
+{
+	const int width = (*SmallSpellIcons)[0].width();
+	const int height = (*SmallSpellIcons)[0].height();
+	UnsafeDrawBorder2px(out, Rectangle { Point { position.x, position.y - height + 1 }, Size { width, height } }, color);
+}
+
 void SetSpellTrans(SpellType t)
 {
 	if (t == SpellType::Skill) {

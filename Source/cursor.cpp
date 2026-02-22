@@ -476,7 +476,7 @@ void CheckCursMove()
 	if (myPlayer._pInvincible) {
 		return;
 	}
-	if (!myPlayer.HoldItem.isEmpty() || spselflag) {
+	if (!myPlayer.HoldItem.isEmpty() || (spselflag && ControlMode != ControlTypes::KeyboardAndMouse)) {
 		cursPosition = { mx, my };
 		return;
 	}
