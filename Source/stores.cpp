@@ -151,6 +151,24 @@ constexpr int SmallTextHeight = 12;
 constexpr int LargeLineHeight = SmallLineHeight + 1;
 constexpr int LargeTextHeight = 18;
 
+int GetStoreLevel()
+{
+	Player &myPlayer = *MyPlayer;
+
+	int l = myPlayer._pLevel / 2;
+	if (!gbIsMultiplayer) {
+		l = 0;
+		for (int i = 0; i < NUMLEVELS; i++) {
+			if (myPlayer._pLvlVisited[i])
+				l = i;
+		}
+	} else {
+		SetRndSeed(glSeedTbl[currlevel] * SDL_GetTicks());
+	}
+
+	return clamp(l + 2, 6, 16);
+}
+
 /**
  * The line index with the Back / Leave button.
  * This is a special button that is always the last line.
@@ -355,12 +373,13 @@ void StartSmith()
 	stextscrl = false;
 	AddSText(0, 1, _("Welcome to the"), UiFlags::ColorWhitegold | UiFlags::AlignCenter, false);
 	AddSText(0, 3, _("Blacksmith's shop"), UiFlags::ColorWhitegold | UiFlags::AlignCenter, false);
-	AddSText(0, 7, _("Would you like to:"), UiFlags::ColorWhitegold | UiFlags::AlignCenter, false);
-	AddSText(0, 10, _("Talk to Griswold"), UiFlags::ColorBlue | UiFlags::AlignCenter, true);
-	AddSText(0, 12, _("Buy basic items"), UiFlags::ColorWhite | UiFlags::AlignCenter, true);
-	AddSText(0, 14, _("Buy premium items"), UiFlags::ColorWhite | UiFlags::AlignCenter, true);
-	AddSText(0, 16, _("Sell items"), UiFlags::ColorWhite | UiFlags::AlignCenter, true);
-	AddSText(0, 18, _("Repair items"), UiFlags::ColorWhite | UiFlags::AlignCenter, true);
+	AddSText(0, 6, _("Would you like to:"), UiFlags::ColorWhitegold | UiFlags::AlignCenter, false);
+	AddSText(0, 8, _("Talk to Griswold"), UiFlags::ColorBlue | UiFlags::AlignCenter, true);
+	AddSText(0, 10, _("Buy basic items"), UiFlags::ColorWhite | UiFlags::AlignCenter, true);
+	AddSText(0, 12, _("Buy premium items"), UiFlags::ColorWhite | UiFlags::AlignCenter, true);
+	AddSText(0, 14, _("Sell items"), UiFlags::ColorWhite | UiFlags::AlignCenter, true);
+	AddSText(0, 16, _("Repair items"), UiFlags::ColorWhite | UiFlags::AlignCenter, true);
+	AddSText(0, 18, _("Refresh items"), UiFlags::ColorWhite | UiFlags::AlignCenter, true);
 	AddSText(0, 20, _("Leave the shop"), UiFlags::ColorWhite | UiFlags::AlignCenter, true);
 	AddSLine(5);
 	storenumh = 20;
@@ -460,7 +479,7 @@ bool StartSmithPremiumBuy()
 	}
 	if (storenumh == 0) {
 		StartStore(TalkID::Smith);
-		stextsel = 14;
+		stextsel = 12;
 		return false;
 	}
 
@@ -715,11 +734,12 @@ void StartWitch()
 	stextsize = false;
 	stextscrl = false;
 	AddSText(0, 2, _("Witch's shack"), UiFlags::ColorWhitegold | UiFlags::AlignCenter, false);
-	AddSText(0, 9, _("Would you like to:"), UiFlags::ColorWhitegold | UiFlags::AlignCenter, false);
-	AddSText(0, 12, _("Talk to Adria"), UiFlags::ColorBlue | UiFlags::AlignCenter, true);
-	AddSText(0, 14, _("Buy items"), UiFlags::ColorWhite | UiFlags::AlignCenter, true);
-	AddSText(0, 16, _("Sell items"), UiFlags::ColorWhite | UiFlags::AlignCenter, true);
-	AddSText(0, 18, _("Recharge staves"), UiFlags::ColorWhite | UiFlags::AlignCenter, true);
+	AddSText(0, 8, _("Would you like to:"), UiFlags::ColorWhitegold | UiFlags::AlignCenter, false);
+	AddSText(0, 10, _("Talk to Adria"), UiFlags::ColorBlue | UiFlags::AlignCenter, true);
+	AddSText(0, 12, _("Buy items"), UiFlags::ColorWhite | UiFlags::AlignCenter, true);
+	AddSText(0, 14, _("Sell items"), UiFlags::ColorWhite | UiFlags::AlignCenter, true);
+	AddSText(0, 16, _("Recharge staves"), UiFlags::ColorWhite | UiFlags::AlignCenter, true);
+	AddSText(0, 18, _("Refresh items"), UiFlags::ColorWhite | UiFlags::AlignCenter, true);
 	AddSText(0, 20, _("Leave the shack"), UiFlags::ColorWhite | UiFlags::AlignCenter, true);
 	AddSLine(5);
 	storenumh = 20;
@@ -1359,23 +1379,32 @@ void StartDrunk()
 void SmithEnter()
 {
 	switch (stextsel) {
-	case 10:
+	case 8:
 		talker = TOWN_SMITH;
-		stextlhold = 10;
+		stextlhold = 8;
 		stextshold = TalkID::Smith;
 		StartStore(TalkID::Gossip);
 		break;
-	case 12:
+	case 10:
 		StartStore(TalkID::SmithBuy);
 		break;
-	case 14:
+	case 12:
 		StartStore(TalkID::SmithPremiumBuy);
 		break;
-	case 16:
+	case 14:
 		StartStore(TalkID::SmithSell);
 		break;
-	case 18:
+	case 16:
 		StartStore(TalkID::SmithRepair);
+		break;
+	case 18:
+		SpawnSmith(GetStoreLevel());
+		numpremium = 0;
+		for (auto &premiumitem : premiumitems)
+			premiumitem.clear();
+		SpawnPremium(*MyPlayer);
+		StartStore(TalkID::Smith);
+		stextsel = 18;
 		break;
 	case 20:
 		stextflag = TalkID::None;
@@ -1408,7 +1437,7 @@ void SmithBuyEnter()
 {
 	if (stextsel == BackButtonLine()) {
 		StartStore(TalkID::Smith);
-		stextsel = 12;
+		stextsel = 10;
 		return;
 	}
 
@@ -1459,7 +1488,7 @@ void SmithPremiumBuyEnter()
 {
 	if (stextsel == BackButtonLine()) {
 		StartStore(TalkID::Smith);
-		stextsel = 14;
+		stextsel = 12;
 		return;
 	}
 
@@ -1536,7 +1565,7 @@ void SmithSellEnter()
 {
 	if (stextsel == BackButtonLine()) {
 		StartStore(TalkID::Smith);
-		stextsel = 16;
+		stextsel = 14;
 		return;
 	}
 
@@ -1588,7 +1617,7 @@ void SmithRepairEnter()
 {
 	if (stextsel == BackButtonLine()) {
 		StartStore(TalkID::Smith);
-		stextsel = 18;
+		stextsel = 16;
 		return;
 	}
 
@@ -1610,20 +1639,25 @@ void SmithRepairEnter()
 void WitchEnter()
 {
 	switch (stextsel) {
-	case 12:
-		stextlhold = 12;
+	case 10:
+		stextlhold = 10;
 		talker = TOWN_WITCH;
 		stextshold = TalkID::Witch;
 		StartStore(TalkID::Gossip);
 		break;
-	case 14:
+	case 12:
 		StartStore(TalkID::WitchBuy);
 		break;
-	case 16:
+	case 14:
 		StartStore(TalkID::WitchSell);
 		break;
-	case 18:
+	case 16:
 		StartStore(TalkID::WitchRecharge);
+		break;
+	case 18:
+		SpawnWitch(GetStoreLevel());
+		StartStore(TalkID::Witch);
+		stextsel = 18;
 		break;
 	case 20:
 		stextflag = TalkID::None;
@@ -1662,7 +1696,7 @@ void WitchBuyEnter()
 {
 	if (stextsel == BackButtonLine()) {
 		StartStore(TalkID::Witch);
-		stextsel = 14;
+		stextsel = 12;
 		return;
 	}
 
@@ -1690,7 +1724,7 @@ void WitchSellEnter()
 {
 	if (stextsel == BackButtonLine()) {
 		StartStore(TalkID::Witch);
-		stextsel = 16;
+		stextsel = 14;
 		return;
 	}
 
@@ -1736,7 +1770,7 @@ void WitchRechargeEnter()
 {
 	if (stextsel == BackButtonLine()) {
 		StartStore(TalkID::Witch);
-		stextsel = 18;
+		stextsel = 16;
 		return;
 	}
 
@@ -2201,25 +2235,12 @@ void InitStores()
 
 void SetupTownStores()
 {
-	Player &myPlayer = *MyPlayer;
-
-	int l = myPlayer._pLevel / 2;
-	if (!gbIsMultiplayer) {
-		l = 0;
-		for (int i = 0; i < NUMLEVELS; i++) {
-			if (myPlayer._pLvlVisited[i])
-				l = i;
-		}
-	} else {
-		SetRndSeed(glSeedTbl[currlevel] * SDL_GetTicks());
-	}
-
-	l = clamp(l + 2, 6, 16);
+	int l = GetStoreLevel();
 	SpawnSmith(l);
 	SpawnWitch(l);
 	SpawnHealer(l);
-	SpawnBoy(myPlayer._pLevel);
-	SpawnPremium(myPlayer);
+	SpawnBoy(MyPlayer->_pLevel);
+	SpawnPremium(*MyPlayer);
 }
 
 void FreeStoreMem()
@@ -2353,7 +2374,7 @@ void StartStore(TalkID s)
 			StartSmithBuy();
 		else {
 			stextflag = TalkID::SmithBuy;
-			stextlhold = 12;
+			stextlhold = 10;
 			StoreESC();
 			return;
 		}
@@ -2517,31 +2538,31 @@ void StoreESC()
 		break;
 	case TalkID::SmithBuy:
 		StartStore(TalkID::Smith);
-		stextsel = 12;
+		stextsel = 10;
 		break;
 	case TalkID::SmithPremiumBuy:
 		StartStore(TalkID::Smith);
-		stextsel = 14;
+		stextsel = 12;
 		break;
 	case TalkID::SmithSell:
 		StartStore(TalkID::Smith);
-		stextsel = 16;
+		stextsel = 14;
 		break;
 	case TalkID::SmithRepair:
 		StartStore(TalkID::Smith);
-		stextsel = 18;
+		stextsel = 16;
 		break;
 	case TalkID::WitchBuy:
 		StartStore(TalkID::Witch);
-		stextsel = 14;
+		stextsel = 12;
 		break;
 	case TalkID::WitchSell:
 		StartStore(TalkID::Witch);
-		stextsel = 16;
+		stextsel = 14;
 		break;
 	case TalkID::WitchRecharge:
 		StartStore(TalkID::Witch);
-		stextsel = 18;
+		stextsel = 16;
 		break;
 	case TalkID::HealerBuy:
 		StartStore(TalkID::Healer);
