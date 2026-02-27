@@ -7,7 +7,7 @@ SODIUM_VERS=1.0.20
 set -euo pipefail
 
 # detect architecture from script name
-if echo "$(basename $0)" | grep -q 64; then
+if echo "$(uname -m)" | grep -q 64; then
     MINGW_ARCH=x86_64-w64-mingw32
     SODIUM_ARCH=win64
 else

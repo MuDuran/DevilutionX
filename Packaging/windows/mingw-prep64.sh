@@ -1,1 +1,2 @@
-mingw-prep.sh
+#!/bin/bash
+$(dirname $0)/mingw-prep.sh
