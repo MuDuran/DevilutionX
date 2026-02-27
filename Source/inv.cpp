@@ -513,6 +513,24 @@ void CheckInvPaste(Player &player, Point cursorPosition)
 				NetSendCmdChInvItem(false, ii);
 			}
 		} else {
+			if (it != 0 && player.HoldItem.isStackablePotion()) {
+				int invIndex = it - 1;
+				Item &existing = player.InvList[invIndex];
+				if (existing._iMiscId == player.HoldItem._iMiscId && existing._iQuantity > 0 && existing._iQuantity < MaxPotionStack) {
+					uint8_t canAdd = MaxPotionStack - existing._iQuantity;
+					uint8_t toAdd = std::min(canAdd, player.HoldItem._iQuantity);
+					existing._iQuantity += toAdd;
+					player.HoldItem._iQuantity -= toAdd;
+					if (player.HoldItem._iQuantity == 0)
+						player.HoldItem.clear();
+					if (&player == MyPlayer) {
+						int ii = slot - SLOTXY_INV_FIRST;
+						NetSendCmdChInvItem(false, ii);
+					}
+					break;
+				}
+			}
+
 			if (it == 0) {
 				player.InvList[player._pNumInv] = player.HoldItem.pop();
 				player._pNumInv++;
@@ -538,7 +556,13 @@ void CheckInvPaste(Player &player, Point cursorPosition)
 	case ILOC_BELT: {
 		int ii = slot - SLOTXY_BELT_FIRST;
 		if (player.SpdList[ii].isEmpty()) {
-			player.SpdList[ii] = player.HoldItem.pop();
+			if (player.HoldItem.isStackablePotion() && player.HoldItem._iQuantity > 1) {
+				player.SpdList[ii] = player.HoldItem;
+				player.SpdList[ii]._iQuantity = 1;
+				player.HoldItem._iQuantity--;
+			} else {
+				player.SpdList[ii] = player.HoldItem.pop();
+			}
 		} else {
 			std::swap(player.SpdList[ii], player.HoldItem);
 			if (player.HoldItem._itype == ItemType::Gold)
@@ -696,7 +720,13 @@ void CheckInvCut(Player &player, Point cursorPosition, bool automaticMove, bool 
 			holdItem = player.InvList[iv - 1];
 			if (automaticMove) {
 				if (CanBePlacedOnBelt(holdItem)) {
-					automaticallyMoved = AutoPlaceItemInBelt(player, holdItem, true);
+					if (holdItem.isStackablePotion() && holdItem._iQuantity > 1) {
+						Item singlePotion = holdItem;
+						singlePotion._iQuantity = 1;
+						automaticallyMoved = AutoPlaceItemInBelt(player, singlePotion, true);
+					} else {
+						automaticallyMoved = AutoPlaceItemInBelt(player, holdItem, true);
+					}
 				} else if (CanEquip(holdItem)) {
 					/*
 					 * Move the respective InvBodyItem to inventory before moving the item from inventory
@@ -770,11 +800,16 @@ void CheckInvCut(Player &player, Point cursorPosition, bool automaticMove, bool 
 				}
 			}
 
-			if (!automaticMove || automaticallyMoved) {
+		if (!automaticMove || automaticallyMoved) {
+			if (automaticallyMoved && player.InvList[iv - 1].isStackablePotion() && player.InvList[iv - 1]._iQuantity > 1) {
+				player.InvList[iv - 1]._iQuantity--;
+				NetSyncInvItem(player, iv - 1);
+			} else {
 				player.RemoveInvItem(iv - 1, false);
 			}
 		}
 	}
+}
 
 	if (r >= SLOTXY_BELT_FIRST) {
 		Item &beltItem = player.SpdList[r - SLOTXY_BELT_FIRST];
@@ -1141,6 +1176,12 @@ void DrawInv(const Surface &out)
 			}
 
 			DrawItem(myPlayer.InvList[ii], out, position, sprite);
+
+			if (myPlayer.InvList[ii]._iQuantity > 1) {
+				DrawString(out, StrCat("x", myPlayer.InvList[ii]._iQuantity),
+				    { position - Displacement { 0, 12 }, InventorySlotSizeInPixels },
+				    { UiFlags::ColorWhite | UiFlags::AlignRight });
+			}
 		}
 	}
 }
@@ -1259,8 +1300,36 @@ bool AutoEquipEnabled(const Player &player, const Item &item)
 	return true;
 }
 
+bool TryStackPotionInInventory(Player &player, const Item &item, bool persistItem)
+{
+	if (!item.isStackablePotion() || item._iQuantity == 0)
+		return false;
+
+	for (int i = 0; i < player._pNumInv; i++) {
+		Item &existing = player.InvList[i];
+		if (existing._iMiscId != item._iMiscId)
+			continue;
+		if (existing._iQuantity >= MaxPotionStack || existing._iQuantity == 0)
+			continue;
+
+		uint8_t canAdd = MaxPotionStack - existing._iQuantity;
+		if (canAdd < item._iQuantity)
+			continue;
+
+		if (persistItem) {
+			existing._iQuantity += item._iQuantity;
+			NetSyncInvItem(player, i);
+		}
+		return true;
+	}
+	return false;
+}
+
 bool AutoPlaceItemInInventory(Player &player, const Item &item, bool persistItem)
 {
+	if (TryStackPotionInInventory(player, item, persistItem))
+		return true;
+
 	Size itemSize = GetInventorySize(item);
 
 	if (itemSize.height == 1) {
@@ -1635,7 +1704,26 @@ void AutoGetItem(Player &player, Item *itemPointer, int ii)
 			autoEquipped = true;
 		}
 
-		if (!done) {
+		if (!done && item.isStackablePotion() && item._iQuantity > 1) {
+			uint8_t remaining = item._iQuantity;
+
+			Item singlePotion = item;
+			singlePotion._iQuantity = 1;
+
+			while (remaining > 0 && AutoPlaceItemInBelt(player, singlePotion, true)) {
+				remaining--;
+			}
+
+			if (remaining > 0) {
+				Item leftover = item;
+				leftover._iQuantity = remaining;
+				if (AutoPlaceItemInInventory(player, leftover, true)) {
+					remaining = 0;
+				}
+			}
+
+			done = (remaining == 0);
+		} else if (!done) {
 			done = AutoPlaceItemInBelt(player, item, true);
 		}
 		if (!done) {
@@ -1774,7 +1862,8 @@ int SyncDropItem(Point position, _item_indexes idx, uint16_t icreateinfo, int is
 		item._iPLToHit = ClampToHit(item, toHit);
 		item._iMaxDam = ClampMaxDam(item, maxDam);
 	}
-	item.dwBuff = ibuff;
+	item.dwBuff = ibuff & 0xFF;
+	item._iQuantity = static_cast<uint8_t>((ibuff >> 8) & 0xFF);
 
 	return PlaceItemInWorld(std::move(item), position);
 }
@@ -1864,7 +1953,11 @@ int8_t CheckInvHLight()
 		InfoString = fmt::format(fmt::runtime(ngettext("{:s} gold piece", "{:s} gold pieces", nGold)), FormatInteger(nGold));
 	} else {
 		InfoColor = pi->getTextColor();
-		InfoString = pi->getName();
+		if (pi->_iQuantity > 1) {
+			InfoString = StrCat(pi->getName().str(), " (x", pi->_iQuantity, ")");
+		} else {
+			InfoString = pi->getName();
+		}
 		if (pi->_iIdentified) {
 			PrintItemDetails(*pi);
 		} else {
@@ -2081,8 +2174,14 @@ bool UseInvItem(int cii)
 		CloseInventory();
 		return true;
 	}
-	if (!item->isScroll() && !item->isRune())
-		player.RemoveInvItem(c);
+	if (!item->isScroll() && !item->isRune()) {
+		if (player.InvList[c].isStackablePotion() && player.InvList[c]._iQuantity > 1) {
+			player.InvList[c]._iQuantity--;
+			NetSyncInvItem(player, c);
+		} else {
+			player.RemoveInvItem(c);
+		}
+	}
 
 	return true;
 }

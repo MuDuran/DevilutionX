@@ -2390,7 +2390,7 @@ void PrepareItemForNetwork(const Item &item, TItem &messageItem)
 	messageItem.wValue = SDL_SwapLE16(item._ivalue);
 	messageItem.wToHit = SDL_SwapLE16(item._iPLToHit);
 	messageItem.wMaxDam = SDL_SwapLE16(item._iMaxDam);
-	messageItem.dwBuff = SDL_SwapLE32(item.dwBuff);
+	messageItem.dwBuff = SDL_SwapLE32((item.dwBuff & 0xFF) | (static_cast<uint32_t>(item._iQuantity) << 8));
 }
 
 void PrepareEarForNetwork(const Item &item, TEar &ear)
@@ -2415,7 +2415,8 @@ void RecreateItem(const Player &player, const TItem &messageItem, Item &item)
 		item._iPLToHit = ClampToHit(item, SDL_SwapLE16(messageItem.wToHit));
 		item._iMaxDam = ClampMaxDam(item, SDL_SwapLE16(messageItem.wMaxDam));
 	}
-	item.dwBuff = dwBuff;
+	item.dwBuff = dwBuff & 0xFF;
+	item._iQuantity = static_cast<uint8_t>((dwBuff >> 8) & 0xFF);
 }
 
 void ClearLastSentPlayerCmd()

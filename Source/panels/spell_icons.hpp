@@ -46,6 +46,7 @@ void DrawLargeSpellIconBorder(const Surface &out, Point position, uint8_t color)
  * @param spell Spell ID.
  */
 void DrawSmallSpellIconBorder(const Surface &out, Point position);
+void DrawSmallSpellIconBorder(const Surface &out, Point position, uint8_t color);
 
 /**
  * @brief Set the color mapping for the `Draw(Small|Large)SpellIcon(Border)` calls.

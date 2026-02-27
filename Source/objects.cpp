@@ -13,6 +13,7 @@
 
 #include "DiabloUI/ui_flags.hpp"
 #include "automap.h"
+#include "control.h"
 #include "cursor.h"
 #ifdef _DEBUG
 #include "debug.h"
@@ -153,6 +154,45 @@ const char *const ShrineNames[] = {
 	N_("Solar"),
 	// TRANSLATORS: Shrine Name Block end
 	N_("Murphy's"),
+};
+/** Maps from shrine_id to a short description of its gameplay effect. */
+const char *const ShrineDescriptions[] = {
+	// TRANSLATORS: Shrine Description Block
+	N_("-1 all stats, +6 one random stat"),
+	N_("+10 durability, -20 one random item"),
+	N_("+2 armor, -1 max weapon damage"),
+	N_("+1 max damage all weapons"),
+	N_("Casts Mana Shield"),
+	N_("Recharges all staves"),
+	N_("Fully repairs all items"),
+	N_("+1 all spell levels, -1 one random"),
+	N_("Resets all chests on this level"),
+	N_("Firebolt +2 levels, -10% max mana"),
+	N_("Casts Nova, restores all mana"),
+	N_("Casts Mana Shield"),
+	N_("Converts potions to rejuvenation"),
+	N_("+2 Magic"),
+	N_("Restores HP/mana, spawns 2 potions"),
+	N_("Casts Phasing (random teleport)"),
+	N_("Charged Bolt +2 levels, -10% max mana"),
+	N_("Fills empty inventory with gold"),
+	N_("Restores other players' HP and mana"),
+	N_("+2 Dexterity"),
+	N_("+2 Strength"),
+	N_("+2 Vitality"),
+	N_("Reveals the entire map"),
+	N_("Holy Bolt +2 levels, -10% max mana"),
+	N_("Identifies all items"),
+	N_("Randomly modifies other players' stats"),
+	N_("+2 primary stat, spawns Firewall trap"),
+	N_("+0-5 Magic, -5% experience"),
+	N_("Converts half gold to experience"),
+	N_("+1000*level XP, casts Flash trap"),
+	N_("Creates a Town Portal"),
+	N_("Fully restores mana"),
+	N_("Time-based: +2 to one stat"),
+	// TRANSLATORS: Shrine Description Block end
+	N_("33% break item, or lose 1/3 gold"),
 };
 /** Specifies the minimum dungeon level on which each shrine will appear. */
 char shrinemin[] = {
@@ -3308,7 +3348,10 @@ void OperateGoatShrine(Player &player, Object &object, _sfx_id sType)
 {
 	SetRndSeed(object._oRndSeed);
 	object._oVar1 = FindValidShrine();
+	bool wasActive = object._oSelFlag != 0;
 	OperateShrine(player, object, sType);
+	if (wasActive && &player == MyPlayer)
+		AppendToDiabloMsg(_(ShrineDescriptions[object._oVar1]));
 	object._oAnimDelay = 2;
 	RedrawEverything();
 }
@@ -3317,7 +3360,10 @@ void OperateCauldron(Player &player, Object &object, _sfx_id sType)
 {
 	SetRndSeed(object._oRndSeed);
 	object._oVar1 = FindValidShrine();
+	bool wasActive = object._oSelFlag != 0;
 	OperateShrine(player, object, sType);
+	if (wasActive && &player == MyPlayer)
+		AppendToDiabloMsg(_(ShrineDescriptions[object._oVar1]));
 	object._oAnimFrame = 3;
 	object._oAnimFlag = false;
 	RedrawEverything();
@@ -4995,6 +5041,9 @@ StringOrView Object::name() const
 void GetObjectStr(const Object &object)
 {
 	InfoString = object.name();
+	if (object.IsShrine()) {
+		AddPanelString(_(ShrineDescriptions[object._oVar1]));
+	}
 	if (MyPlayer->_pClass == HeroClass::Rogue) {
 		if (object._oTrapFlag) {
 			InfoString = fmt::format(fmt::runtime(_(/* TRANSLATORS: {:s} will either be a chest or a door */ "Trapped {:s}")), InfoString.str());

@@ -335,8 +335,15 @@ void LeftMouseDown(uint16_t modState)
 	}
 
 	if (spselflag) {
-		SetSpell();
-		return;
+		if (ControlMode == ControlTypes::KeyboardAndMouse) {
+			if (IsMouseOverSpellList()) {
+				SetSpell();
+				return;
+			}
+		} else {
+			SetSpell();
+			return;
+		}
 	}
 
 	if (stextflag != TalkID::None) {
@@ -428,8 +435,15 @@ void RightMouseDown(bool isShiftHeld)
 	if (stextflag != TalkID::None)
 		return;
 	if (spselflag) {
-		SetSpell();
-		return;
+		if (ControlMode == ControlTypes::KeyboardAndMouse) {
+			if (IsMouseOverSpellList()) {
+				SetSpell();
+				return;
+			}
+		} else {
+			SetSpell();
+			return;
+		}
 	}
 	if (sbookflag && GetRightPanel().contains(MousePosition))
 		return;
@@ -1633,7 +1647,7 @@ void InitKeymapActions()
 		    N_("Hotkey for skill or spell."),
 		    i < 4 ? static_cast<uint32_t>(SDLK_F5) + i : static_cast<uint32_t>(SDLK_UNKNOWN),
 		    [i]() {
-			    if (spselflag) {
+			    if (spselflag && IsMouseOverSpellList()) {
 				    SetSpeedSpell(i);
 				    return;
 			    }

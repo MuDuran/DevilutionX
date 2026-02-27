@@ -140,9 +140,9 @@ void PackItem(ItemPack &packedItem, const Item &item, bool isHellfire)
 
 			packedItem.bCh = item._iCharges;
 			packedItem.bMCh = item._iMaxCharges;
-			if (item.IDidx == IDI_GOLD)
-				packedItem.wValue = SDL_SwapLE16(item._ivalue);
-			packedItem.dwBuff = item.dwBuff;
+		if (item.IDidx == IDI_GOLD)
+			packedItem.wValue = SDL_SwapLE16(item._ivalue);
+		packedItem.dwBuff = (item.dwBuff & 0xFF) | (static_cast<uint32_t>(item._iQuantity) << 8);
 		}
 	}
 }
@@ -337,6 +337,7 @@ void UnPackItem(const ItemPack &packedItem, const Player &player, Item &item, bo
 		item._iDurability = ClampDurability(item, packedItem.bDur);
 		item._iMaxCharges = clamp<int>(packedItem.bMCh, 0, item._iMaxCharges);
 		item._iCharges = clamp<int>(packedItem.bCh, 0, item._iMaxCharges);
+		item._iQuantity = static_cast<uint8_t>((packedItem.dwBuff >> 8) & 0xFF);
 	}
 }
 

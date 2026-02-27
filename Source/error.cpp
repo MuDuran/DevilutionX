@@ -134,6 +134,17 @@ void InitDiabloMsg(string_view msg, uint32_t duration /*= 3500*/)
 	}
 }
 
+void AppendToDiabloMsg(string_view appendText)
+{
+	if (DiabloMessages.empty())
+		return;
+	DiabloMessages.back().text += "\n\n";
+	DiabloMessages.back().text += appendText;
+	if (DiabloMessages.size() == 1) {
+		InitNextLines();
+	}
+}
+
 bool IsDiabloMsgAvailable()
 {
 	return !DiabloMessages.empty();

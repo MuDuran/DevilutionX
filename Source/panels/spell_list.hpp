@@ -24,6 +24,11 @@ void SetSpeedSpell(size_t slot);
 void ToggleSpell(size_t slot);
 
 /**
+ * @brief Returns true if the mouse cursor is currently over a spell icon in the speed book.
+ */
+bool IsMouseOverSpellList();
+
+/**
  * Draws the "Speed Book": the rows of known spells for quick-setting a spell that
  * show up when you click the spell slot at the control panel.
  */

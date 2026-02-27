@@ -73,6 +73,7 @@ enum diablo_message : uint8_t {
 
 void InitDiabloMsg(diablo_message e, uint32_t duration = 3500);
 void InitDiabloMsg(string_view msg, uint32_t duration = 3500);
+void AppendToDiabloMsg(string_view appendText);
 bool IsDiabloMsgAvailable();
 void CancelCurrentDiabloMsg();
 void ClrDiabloMsg();

@@ -33,6 +33,8 @@ constexpr int MaxVendorValueHf = 200000;
 constexpr int MaxBoyValue = 90000;
 constexpr int MaxBoyValueHf = 200000;
 
+constexpr uint8_t MaxPotionStack = 3;
+
 enum item_quality : uint8_t {
 	ITEM_QUALITY_NORMAL,
 	ITEM_QUALITY_MAGIC,
@@ -250,6 +252,7 @@ struct Item {
 	bool _iStatFlag = false;
 	ItemSpecialEffectHf _iDamAcFlags = ItemSpecialEffectHf::None;
 	uint32_t dwBuff = 0;
+	uint8_t _iQuantity = 0;
 
 	/**
 	 * @brief Clears this item and returns the old value
@@ -417,6 +420,11 @@ struct Item {
 		default:
 			return false;
 		}
+	}
+
+	[[nodiscard]] bool isStackablePotion() const
+	{
+		return IsAnyOf(_iMiscId, IMISC_HEAL, IMISC_FULLHEAL, IMISC_MANA, IMISC_FULLMANA, IMISC_REJUV, IMISC_FULLREJUV);
 	}
 
 	[[nodiscard]] bool isUsable() const;

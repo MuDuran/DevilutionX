@@ -399,17 +399,20 @@ void InitLevelChange(Player &player)
 	Player &myPlayer = *MyPlayer;
 
 	RemovePlrMissiles(player);
-	player.pManaShield = false;
-	player.wReflections = 0;
 	if (&player != MyPlayer) {
-		// share info about your manashield when another player joins the level
 		if (myPlayer.pManaShield)
 			NetSendCmd(true, CMD_SETSHIELD);
-		// share info about your reflect charges when another player joins the level
-		NetSendCmdParam1(true, CMD_SETREFLECT, myPlayer.wReflections);
-	} else if (qtextflag) {
-		qtextflag = false;
-		stream_stop();
+		if (myPlayer.wReflections > 0)
+			NetSendCmdParam1(true, CMD_SETREFLECT, myPlayer.wReflections);
+	} else {
+		if (player.pManaShield)
+			NetSendCmd(true, CMD_SETSHIELD);
+		if (player.wReflections > 0)
+			NetSendCmdParam1(true, CMD_SETREFLECT, player.wReflections);
+		if (qtextflag) {
+			qtextflag = false;
+			stream_stop();
+		}
 	}
 
 	FixPlrWalkTags(player);

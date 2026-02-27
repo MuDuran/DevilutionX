@@ -145,6 +145,15 @@ bool AutoEquip(Player &player, const Item &item, bool persistItem = true);
  * @param persistItem Pass 'True' to actually place the item in the inventory. The default is 'False'.
  * @return 'True' in case the item can be placed on the player's inventory and 'False' otherwise.
  */
+/**
+ * @brief Tries to stack a potion into an existing incomplete stack in the player's inventory.
+ * @param player The player whose inventory will be checked.
+ * @param item The potion item to stack.
+ * @param persistItem Pass 'True' to actually modify the stack quantity. 'False' only checks feasibility.
+ * @return 'True' if the potion was stacked into an existing slot, 'False' otherwise.
+ */
+bool TryStackPotionInInventory(Player &player, const Item &item, bool persistItem = false);
+
 bool AutoPlaceItemInInventory(Player &player, const Item &item, bool persistItem = false);
 
 /**

@@ -20,28 +20,36 @@
 #include "utils/utf8.hpp"
 
 #define SPLROWICONLS 10
+#define SPLSMALICONLENGTH 37
 
 namespace devilution {
 
 namespace {
 
-void PrintSBookSpellType(const Surface &out, Point position, string_view text, uint8_t rectColorIndex)
+int GetSpeedBookIconSize()
 {
-	DrawLargeSpellIconBorder(out, position, rectColorIndex);
+	if (ControlMode == ControlTypes::KeyboardAndMouse)
+		return SPLSMALICONLENGTH;
+	return SPLICONLENGTH;
+}
 
-	// Align the spell type text with bottom of spell icon
-	position += Displacement { SPLICONLENGTH / 2 - GetLineWidth(text) / 2, (IsSmallFontTall() ? -19 : -15) };
 
-	// Then draw the text over the top
+void PrintSBookSpellType(const Surface &out, Point position, string_view text, uint8_t rectColorIndex, int iconSize)
+{
+	if (iconSize == SPLICONLENGTH)
+		DrawLargeSpellIconBorder(out, position, rectColorIndex);
+	else
+		DrawSmallSpellIconBorder(out, position, rectColorIndex);
+
+	position += Displacement { iconSize / 2 - GetLineWidth(text) / 2, (IsSmallFontTall() ? -19 : -15) };
+
 	DrawString(out, text, position, { UiFlags::ColorWhite | UiFlags::Outlined });
 }
 
-void PrintSBookHotkey(const Surface &out, Point position, const string_view text)
+void PrintSBookHotkey(const Surface &out, Point position, const string_view text, int iconSize)
 {
-	// Align the hot key text with the top-right corner of the spell icon
-	position += Displacement { SPLICONLENGTH - (GetLineWidth(text.data()) + 5), 5 - SPLICONLENGTH };
+	position += Displacement { iconSize - (GetLineWidth(text.data()) + 5), 5 - iconSize };
 
-	// Then draw the text over the top
 	DrawString(out, text, position, { UiFlags::ColorWhite | UiFlags::Outlined });
 }
 
@@ -108,14 +116,18 @@ void DrawSpell(const Surface &out)
 
 	std::optional<string_view> hotkeyName = GetHotkeyName(spl, myPlayer._pRSplType, true);
 	if (hotkeyName)
-		PrintSBookHotkey(out, position, *hotkeyName);
+		PrintSBookHotkey(out, position, *hotkeyName, SPLICONLENGTH);
 }
 
 void DrawSpellList(const Surface &out)
 {
-	InfoString = {};
-
 	Player &myPlayer = *MyPlayer;
+	const int iconSize = GetSpeedBookIconSize();
+	const bool useSmallIcons = (iconSize == SPLSMALICONLENGTH);
+	const bool isKBM = ControlMode == ControlTypes::KeyboardAndMouse;
+
+	if (!isKBM || IsMouseOverSpellList())
+		InfoString = {};
 
 	for (auto &spellListItem : GetSpellListItems()) {
 		const SpellID spellId = spellListItem.id;
@@ -132,12 +144,15 @@ void DrawSpellList(const Surface &out)
 		}
 
 		SetSpellTrans(transType);
-		DrawLargeSpellIcon(out, spellListItem.location, spellId);
+		if (useSmallIcons)
+			DrawSmallSpellIcon(out, spellListItem.location, spellId);
+		else
+			DrawLargeSpellIcon(out, spellListItem.location, spellId);
 
 		std::optional<string_view> shortHotkeyName = GetHotkeyName(spellId, spellListItem.type, true);
 
 		if (shortHotkeyName)
-			PrintSBookHotkey(out, spellListItem.location, *shortHotkeyName);
+			PrintSBookHotkey(out, spellListItem.location, *shortHotkeyName, iconSize);
 
 		if (!spellListItem.isSelected)
 			continue;
@@ -147,14 +162,14 @@ void DrawSpellList(const Surface &out)
 		switch (spellListItem.type) {
 		case SpellType::Skill:
 			spellColor = PAL16_YELLOW - 46;
-			PrintSBookSpellType(out, spellListItem.location, _("Skill"), spellColor);
+			PrintSBookSpellType(out, spellListItem.location, _("Skill"), spellColor, iconSize);
 			InfoString = fmt::format(fmt::runtime(_("{:s} Skill")), pgettext("spell", spellDataItem.sNameText));
 			break;
 		case SpellType::Spell:
 			if (!myPlayer.isOnLevel(0)) {
 				spellColor = PAL16_BLUE + 5;
 			}
-			PrintSBookSpellType(out, spellListItem.location, _("Spell"), spellColor);
+			PrintSBookSpellType(out, spellListItem.location, _("Spell"), spellColor, iconSize);
 			InfoString = fmt::format(fmt::runtime(_("{:s} Spell")), pgettext("spell", spellDataItem.sNameText));
 			if (spellId == SpellID::HolyBolt) {
 				AddPanelString(_("Damages undead only"));
@@ -168,7 +183,7 @@ void DrawSpellList(const Surface &out)
 			if (!myPlayer.isOnLevel(0)) {
 				spellColor = PAL16_RED - 59;
 			}
-			PrintSBookSpellType(out, spellListItem.location, _("Scroll"), spellColor);
+			PrintSBookSpellType(out, spellListItem.location, _("Scroll"), spellColor, iconSize);
 			InfoString = fmt::format(fmt::runtime(_("Scroll of {:s}")), pgettext("spell", spellDataItem.sNameText));
 			const InventoryAndBeltPlayerItemsRange items { myPlayer };
 			const int scrollCount = std::count_if(items.begin(), items.end(), [spellId](const Item &item) {
@@ -180,7 +195,7 @@ void DrawSpellList(const Surface &out)
 			if (!myPlayer.isOnLevel(0)) {
 				spellColor = PAL16_ORANGE + 5;
 			}
-			PrintSBookSpellType(out, spellListItem.location, _("Staff"), spellColor);
+			PrintSBookSpellType(out, spellListItem.location, _("Staff"), spellColor, iconSize);
 			InfoString = fmt::format(fmt::runtime(_("Staff of {:s}")), pgettext("spell", spellDataItem.sNameText));
 			int charges = myPlayer.InvBody[INVLOC_HAND_LEFT]._iCharges;
 			AddPanelString(fmt::format(fmt::runtime(ngettext("{:d} Charge", "{:d} Charges", charges)), charges));
@@ -201,8 +216,9 @@ std::vector<SpellListItem> GetSpellListItems()
 
 	uint64_t mask;
 	const Point mainPanelPosition = GetMainPanel().position;
+	const int iconSize = GetSpeedBookIconSize();
 
-	int x = mainPanelPosition.x + 12 + SPLICONLENGTH * SPLROWICONLS;
+	int x = mainPanelPosition.x + 12 + iconSize * SPLROWICONLS;
 	int y = mainPanelPosition.y - 17;
 
 	for (auto i : enum_values<SpellType>()) {
@@ -228,20 +244,20 @@ std::vector<SpellListItem> GetSpellListItems()
 			if ((mask & spl) == 0)
 				continue;
 			int lx = x;
-			int ly = y - SPLICONLENGTH;
-			bool isSelected = (MousePosition.x >= lx && MousePosition.x < lx + SPLICONLENGTH && MousePosition.y >= ly && MousePosition.y < ly + SPLICONLENGTH);
+			int ly = y - iconSize;
+			bool isSelected = (MousePosition.x >= lx && MousePosition.x < lx + iconSize && MousePosition.y >= ly && MousePosition.y < ly + iconSize);
 			spellListItems.emplace_back(SpellListItem { { x, y }, static_cast<SpellType>(i), static_cast<SpellID>(j), isSelected });
-			x -= SPLICONLENGTH;
-			if (x == mainPanelPosition.x + 12 - SPLICONLENGTH) {
-				x = mainPanelPosition.x + 12 + SPLICONLENGTH * SPLROWICONLS;
-				y -= SPLICONLENGTH;
+			x -= iconSize;
+			if (x == mainPanelPosition.x + 12 - iconSize) {
+				x = mainPanelPosition.x + 12 + iconSize * SPLROWICONLS;
+				y -= iconSize;
 			}
 		}
-		if (mask != 0 && x != mainPanelPosition.x + 12 + SPLICONLENGTH * SPLROWICONLS)
-			x -= SPLICONLENGTH;
-		if (x == mainPanelPosition.x + 12 - SPLICONLENGTH) {
-			x = mainPanelPosition.x + 12 + SPLICONLENGTH * SPLROWICONLS;
-			y -= SPLICONLENGTH;
+		if (mask != 0 && x != mainPanelPosition.x + 12 + iconSize * SPLROWICONLS)
+			x -= iconSize;
+		if (x == mainPanelPosition.x + 12 - iconSize) {
+			x = mainPanelPosition.x + 12 + iconSize * SPLROWICONLS;
+			y -= iconSize;
 		}
 	}
 
@@ -253,7 +269,9 @@ void SetSpell()
 	SpellID pSpell;
 	SpellType pSplType;
 
-	spselflag = false;
+	if (ControlMode != ControlTypes::KeyboardAndMouse)
+		spselflag = false;
+
 	if (!GetSpellListSelection(pSpell, pSplType)) {
 		return;
 	}
@@ -263,6 +281,15 @@ void SetSpell()
 	myPlayer._pRSplType = pSplType;
 
 	RedrawEverything();
+}
+
+bool IsMouseOverSpellList()
+{
+	for (auto &spellListItem : GetSpellListItems()) {
+		if (spellListItem.isSelected)
+			return true;
+	}
+	return false;
 }
 
 void SetSpeedSpell(size_t slot)
@@ -327,11 +354,12 @@ void ToggleSpell(size_t slot)
 void DoSpeedBook()
 {
 	spselflag = true;
+	const int iconSize = GetSpeedBookIconSize();
 	const Point mainPanelPosition = GetMainPanel().position;
-	int xo = mainPanelPosition.x + 12 + SPLICONLENGTH * 10;
+	int xo = mainPanelPosition.x + 12 + iconSize * 10;
 	int yo = mainPanelPosition.y - 17;
-	int x = xo + SPLICONLENGTH / 2;
-	int y = yo - SPLICONLENGTH / 2;
+	int x = xo + iconSize / 2;
+	int y = yo - iconSize / 2;
 
 	Player &myPlayer = *MyPlayer;
 
@@ -358,27 +386,28 @@ void DoSpeedBook()
 			for (int j = 1; j < MAX_SPELLS; j++) {
 				if ((spell & spells) != 0) {
 					if (j == static_cast<int8_t>(myPlayer._pRSpell) && static_cast<SpellType>(i) == myPlayer._pRSplType) {
-						x = xo + SPLICONLENGTH / 2;
-						y = yo - SPLICONLENGTH / 2;
+						x = xo + iconSize / 2;
+						y = yo - iconSize / 2;
 					}
-					xo -= SPLICONLENGTH;
-					if (xo == mainPanelPosition.x + 12 - SPLICONLENGTH) {
-						xo = mainPanelPosition.x + 12 + SPLICONLENGTH * SPLROWICONLS;
-						yo -= SPLICONLENGTH;
+					xo -= iconSize;
+					if (xo == mainPanelPosition.x + 12 - iconSize) {
+						xo = mainPanelPosition.x + 12 + iconSize * SPLROWICONLS;
+						yo -= iconSize;
 					}
 				}
 				spell <<= 1ULL;
 			}
-			if (spells != 0 && xo != mainPanelPosition.x + 12 + SPLICONLENGTH * SPLROWICONLS)
-				xo -= SPLICONLENGTH;
-			if (xo == mainPanelPosition.x + 12 - SPLICONLENGTH) {
-				xo = mainPanelPosition.x + 12 + SPLICONLENGTH * SPLROWICONLS;
-				yo -= SPLICONLENGTH;
+			if (spells != 0 && xo != mainPanelPosition.x + 12 + iconSize * SPLROWICONLS)
+				xo -= iconSize;
+			if (xo == mainPanelPosition.x + 12 - iconSize) {
+				xo = mainPanelPosition.x + 12 + iconSize * SPLROWICONLS;
+				yo -= iconSize;
 			}
 		}
 	}
 
-	SetCursorPos({ x, y });
+	if (ControlMode != ControlTypes::KeyboardAndMouse)
+		SetCursorPos({ x, y });
 }
 
 } // namespace devilution

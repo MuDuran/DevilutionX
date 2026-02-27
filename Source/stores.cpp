@@ -521,11 +521,19 @@ void ScrollSmithSell(int idx)
 		if (!storehold[idx].isEmpty()) {
 			UiFlags itemColor = storehold[idx].getTextColorWithStatCheck();
 
+			std::string displayName;
+			if (storehold[idx]._iQuantity > 1)
+				displayName = StrCat(storehold[idx].getName().str(), " (x", storehold[idx]._iQuantity, ")");
+
+			string_view nameToShow = displayName.empty()
+			    ? string_view(storehold[idx].getName().str())
+			    : string_view(displayName);
+
 			if (storehold[idx]._iMagical != ITEM_QUALITY_NORMAL && storehold[idx]._iIdentified) {
-				AddSText(20, l, storehold[idx].getName(), itemColor, true, storehold[idx]._iCurs, true);
+				AddSText(20, l, nameToShow, itemColor, true, storehold[idx]._iCurs, true);
 				AddSTextVal(l, storehold[idx]._iIvalue);
 			} else {
-				AddSText(20, l, storehold[idx].getName(), itemColor, true, storehold[idx]._iCurs, true);
+				AddSText(20, l, nameToShow, itemColor, true, storehold[idx]._iCurs, true);
 				AddSTextVal(l, storehold[idx]._ivalue);
 			}
 
@@ -561,6 +569,8 @@ void StartSmithSell()
 				storehold[storenumh]._ivalue = storehold[storenumh]._iIvalue;
 
 			storehold[storenumh]._ivalue = std::max(storehold[storenumh]._ivalue / 4, 1);
+			if (storehold[storenumh]._iQuantity > 1)
+				storehold[storenumh]._ivalue *= storehold[storenumh]._iQuantity;
 			storehold[storenumh]._iIvalue = storehold[storenumh]._ivalue;
 			storehidx[storenumh] = i;
 			storenumh++;
@@ -578,6 +588,8 @@ void StartSmithSell()
 				storehold[storenumh]._ivalue = storehold[storenumh]._iIvalue;
 
 			storehold[storenumh]._ivalue = std::max(storehold[storenumh]._ivalue / 4, 1);
+			if (storehold[storenumh]._iQuantity > 1)
+				storehold[storenumh]._ivalue *= storehold[storenumh]._iQuantity;
 			storehold[storenumh]._iIvalue = storehold[storenumh]._ivalue;
 			storehidx[storenumh] = -(i + 1);
 			storenumh++;
@@ -823,6 +835,8 @@ void StartWitchSell()
 				storehold[storenumh]._ivalue = storehold[storenumh]._iIvalue;
 
 			storehold[storenumh]._ivalue = std::max(storehold[storenumh]._ivalue / 4, 1);
+			if (storehold[storenumh]._iQuantity > 1)
+				storehold[storenumh]._ivalue *= storehold[storenumh]._iQuantity;
 			storehold[storenumh]._iIvalue = storehold[storenumh]._ivalue;
 			storehidx[storenumh] = i;
 			storenumh++;
@@ -840,6 +854,8 @@ void StartWitchSell()
 				storehold[storenumh]._ivalue = storehold[storenumh]._iIvalue;
 
 			storehold[storenumh]._ivalue = std::max(storehold[storenumh]._ivalue / 4, 1);
+			if (storehold[storenumh]._iQuantity > 1)
+				storehold[storenumh]._ivalue *= storehold[storenumh]._iQuantity;
 			storehold[storenumh]._iIvalue = storehold[storenumh]._ivalue;
 			storehidx[storenumh] = -(i + 1);
 			storenumh++;
@@ -966,7 +982,13 @@ void StoreConfirm(Item &item)
 	ClearSText(5, 23);
 
 	UiFlags itemColor = item.getTextColorWithStatCheck();
-	AddSText(20, 8, item.getName(), itemColor, false);
+	std::string confirmName;
+	if (item._iQuantity > 1) {
+		confirmName = StrCat(item.getName().str(), " (x", item._iQuantity, ")");
+		AddSText(20, 8, confirmName, itemColor, false);
+	} else {
+		AddSText(20, 8, item.getName(), itemColor, false);
+	}
 	AddSTextVal(8, item._iIvalue);
 	PrintStoreItem(item, 9, itemColor);
 

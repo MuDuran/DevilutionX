@@ -2959,6 +2959,7 @@ void InitializeItem(Item &item, _item_indexes itemData)
 	item.IDidx = static_cast<_item_indexes>(itemData);
 	if (gbIsHellfire)
 		item.dwBuff |= CF_HELLFIRE;
+	item._iQuantity = item.isStackablePotion() ? 1 : 0;
 }
 
 void GenerateNewSeed(Item &item)
@@ -3186,6 +3187,7 @@ void GetItemAttrs(Item &item, _item_indexes itemData, int lvl)
 	item.IDidx = itemData;
 	if (gbIsHellfire)
 		item.dwBuff |= CF_HELLFIRE;
+	item._iQuantity = item.isStackablePotion() ? 1 : 0;
 	item._iPrePower = IPL_INVALID;
 	item._iSufPower = IPL_INVALID;
 
@@ -3648,7 +3650,11 @@ void GetItemFrm(Item &item)
 void GetItemStr(Item &item)
 {
 	if (item._itype != ItemType::Gold) {
-		InfoString = item.getName();
+		if (item._iQuantity > 1) {
+			InfoString = StrCat(item.getName().str(), " (x", item._iQuantity, ")");
+		} else {
+			InfoString = item.getName();
+		}
 		InfoColor = item.getTextColor();
 	} else {
 		int nGold = item._ivalue;
