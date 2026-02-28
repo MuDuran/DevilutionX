@@ -2126,22 +2126,22 @@ _item_indexes RndHealerItem(const Player &player, int lvl)
 	return RndVendorItem<HealerItemOk>(player, 0, lvl);
 }
 
-void RecreateSmithItem(const Player &player, Item &item, int lvl, int iseed)
+void RecreateSmithItem(const Player &player, Item &item, _item_indexes idx, int lvl, int iseed)
 {
 	SetRndSeed(iseed);
-	_item_indexes itype = RndSmithItem(player, lvl);
-	GetItemAttrs(item, itype, lvl);
+	DiscardRandomValues(1);
+	GetItemAttrs(item, idx, lvl);
 
 	item._iSeed = iseed;
 	item._iCreateInfo = lvl | CF_SMITH;
 	item._iIdentified = true;
 }
 
-void RecreatePremiumItem(const Player &player, Item &item, int plvl, int iseed)
+void RecreatePremiumItem(const Player &player, Item &item, _item_indexes idx, int plvl, int iseed)
 {
 	SetRndSeed(iseed);
-	_item_indexes itype = RndPremiumItem(player, plvl / 4, plvl);
-	GetItemAttrs(item, itype, plvl);
+	DiscardRandomValues(1);
+	GetItemAttrs(item, idx, plvl);
 	GetItemBonus(player, item, plvl / 2, plvl, true, !gbIsHellfire);
 
 	item._iSeed = iseed;
@@ -2149,11 +2149,11 @@ void RecreatePremiumItem(const Player &player, Item &item, int plvl, int iseed)
 	item._iIdentified = true;
 }
 
-void RecreateBoyItem(const Player &player, Item &item, int lvl, int iseed)
+void RecreateBoyItem(const Player &player, Item &item, _item_indexes idx, int lvl, int iseed)
 {
 	SetRndSeed(iseed);
-	_item_indexes itype = RndBoyItem(player, lvl);
-	GetItemAttrs(item, itype, lvl);
+	DiscardRandomValues(1);
+	GetItemAttrs(item, idx, lvl);
 	GetItemBonus(player, item, lvl, 2 * lvl, true, true);
 
 	item._iSeed = iseed;
@@ -2171,8 +2171,8 @@ void RecreateWitchItem(const Player &player, Item &item, _item_indexes idx, int 
 		GetItemAttrs(item, idx, lvl);
 	} else {
 		SetRndSeed(iseed);
-		_item_indexes itype = RndWitchItem(player, lvl);
-		GetItemAttrs(item, itype, lvl);
+		DiscardRandomValues(1);
+		GetItemAttrs(item, idx, lvl);
 		int iblvl = -1;
 		if (GenerateRnd(100) <= 5)
 			iblvl = 2 * lvl;
@@ -2193,8 +2193,8 @@ void RecreateHealerItem(const Player &player, Item &item, _item_indexes idx, int
 		GetItemAttrs(item, idx, lvl);
 	} else {
 		SetRndSeed(iseed);
-		_item_indexes itype = RndHealerItem(player, lvl);
-		GetItemAttrs(item, itype, lvl);
+		DiscardRandomValues(1);
+		GetItemAttrs(item, idx, lvl);
 	}
 
 	item._iSeed = iseed;
@@ -2205,11 +2205,11 @@ void RecreateHealerItem(const Player &player, Item &item, _item_indexes idx, int
 void RecreateTownItem(const Player &player, Item &item, _item_indexes idx, uint16_t icreateinfo, int iseed)
 {
 	if ((icreateinfo & CF_SMITH) != 0)
-		RecreateSmithItem(player, item, icreateinfo & CF_LEVEL, iseed);
+		RecreateSmithItem(player, item, idx, icreateinfo & CF_LEVEL, iseed);
 	else if ((icreateinfo & CF_SMITHPREMIUM) != 0)
-		RecreatePremiumItem(player, item, icreateinfo & CF_LEVEL, iseed);
+		RecreatePremiumItem(player, item, idx, icreateinfo & CF_LEVEL, iseed);
 	else if ((icreateinfo & CF_BOY) != 0)
-		RecreateBoyItem(player, item, icreateinfo & CF_LEVEL, iseed);
+		RecreateBoyItem(player, item, idx, icreateinfo & CF_LEVEL, iseed);
 	else if ((icreateinfo & CF_WITCH) != 0)
 		RecreateWitchItem(player, item, idx, icreateinfo & CF_LEVEL, iseed);
 	else if ((icreateinfo & CF_HEALER) != 0)
