@@ -33,6 +33,8 @@ elseif(TARGET_PLATFORM STREQUAL "windowsXP")
   include(platforms/windowsXP)
 elseif(WIN32)
   include(platforms/windows)
+elseif(TARGET_PLATFORM STREQUAL "trimui_smart_pro")
+  include(platforms/trimui_smart_pro)
 endif()
 
 if(NINTENDO_SWITCH)
