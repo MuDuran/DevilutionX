@@ -1,10 +1,5 @@
 #pragma once
 
-#if __cplusplus >= 201703L
-#include <charconv>
-#include <system_error>
-#endif
-
 #include <cstdint>
 
 #include <expected.hpp>
@@ -26,20 +21,6 @@ ParseIntResult<IntT> ParseInt(
     string_view str, IntT min = std::numeric_limits<IntT>::min(),
     IntT max = std::numeric_limits<IntT>::max(), const char **endOfParse = nullptr)
 {
-#if __cplusplus >= 201703L
-	IntT value;
-	const std::from_chars_result result = std::from_chars(str.data(), str.data() + str.size(), value);
-	if (endOfParse != nullptr) {
-		*endOfParse = result.ptr;
-	}
-	if (result.ec == std::errc::invalid_argument)
-		return tl::unexpected(ParseIntError::ParseError);
-	if (result.ec == std::errc::result_out_of_range || value < min || value > max)
-		return tl::unexpected(ParseIntError::OutOfRange);
-	if (result.ec != std::errc())
-		return tl::unexpected(ParseIntError::ParseError);
-	return value;
-#else
 	if (str.empty()) {
 		return tl::unexpected { ParseIntError::ParseError };
 	}
@@ -67,7 +48,6 @@ ParseIntResult<IntT> ParseInt(
 		return tl::unexpected { ParseIntError::OutOfRange };
 	}
 	return result;
-#endif
 }
 
 /**
