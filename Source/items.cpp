@@ -1977,10 +1977,6 @@ bool PremiumItemOk(const Player &player, const ItemData &item)
 	if (gbIsMultiplayer) {
 		if (item.iMiscId == IMISC_OILOF)
 			return false;
-		if (item.itype == ItemType::Ring)
-			return false;
-		if (item.itype == ItemType::Amulet)
-			return false;
 	}
 
 	return true;
@@ -2108,16 +2104,14 @@ bool HealerItemOk(const Player &player, const ItemData &item)
 	if (item.iMiscId == IMISC_SCROLLT)
 		return item.iSpell == SpellID::HealOther && gbIsMultiplayer;
 
-	if (!gbIsMultiplayer) {
-		if (item.iMiscId == IMISC_ELIXSTR)
-			return !gbIsHellfire || player._pBaseStr < player.GetMaximumAttributeValue(CharacterAttribute::Strength);
-		if (item.iMiscId == IMISC_ELIXMAG)
-			return !gbIsHellfire || player._pBaseMag < player.GetMaximumAttributeValue(CharacterAttribute::Magic);
-		if (item.iMiscId == IMISC_ELIXDEX)
-			return !gbIsHellfire || player._pBaseDex < player.GetMaximumAttributeValue(CharacterAttribute::Dexterity);
-		if (item.iMiscId == IMISC_ELIXVIT)
-			return !gbIsHellfire || player._pBaseVit < player.GetMaximumAttributeValue(CharacterAttribute::Vitality);
-	}
+	if (item.iMiscId == IMISC_ELIXSTR)
+		return true;
+	if (item.iMiscId == IMISC_ELIXMAG)
+		return true;
+	if (item.iMiscId == IMISC_ELIXDEX)
+		return true;
+	if (item.iMiscId == IMISC_ELIXVIT)
+		return true;
 
 	if (item.iMiscId == IMISC_REJUV)
 		return true;
